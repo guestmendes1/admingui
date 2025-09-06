@@ -5,19 +5,39 @@ Feito para brincar em server privado com amigos.
 
 local player = game.Players.LocalPlayer
 local plrGui = player:WaitForChild("PlayerGui")
+local UIS = game:GetService("UserInputService")
 
 -- GUI base
 local gui = Instance.new("ScreenGui", plrGui)
 gui.Name = "AdminTrollGUI"
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 250, 0, 350)
-frame.Position = UDim2.new(0.5, -125, 0.5, -175)
+frame.Size = UDim2.new(0, 250, 0, 420)
+frame.Position = UDim2.new(0.5, -125, 0.5, -210)
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.Active = true
+frame.Draggable = true -- ✅ arrastar menu
 
 local uiList = Instance.new("UIListLayout", frame)
 uiList.Padding = UDim.new(0, 5)
 uiList.FillDirection = Enum.FillDirection.Vertical
+
+-- Marca @tavinxoficial no topo
+local titulo = Instance.new("TextLabel", frame)
+titulo.Size = UDim2.new(1, 0, 0, 30)
+titulo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+titulo.TextColor3 = Color3.new(1,1,1)
+titulo.Font = Enum.Font.SourceSansBold
+titulo.TextSize = 18
+titulo.Text = "@tavinxoficial"
+titulo.TextYAlignment = Enum.TextYAlignment.Center
+
+-- Toggle menu com letra I
+UIS.InputBegan:Connect(function(input, gp)
+    if not gp and input.KeyCode == Enum.KeyCode.I then
+        frame.Visible = not frame.Visible
+    end
+end)
 
 -- Função util para criar botões
 local function criarBotao(nome, callback)
@@ -45,7 +65,6 @@ criarBotao("Toggle Voar", function()
     local char = player.Character
     if not char then return end
     local hrp = char:WaitForChild("HumanoidRootPart")
-    local uis = game:GetService("UserInputService")
     local cam = workspace.CurrentCamera
 
     flying = not flying
@@ -54,7 +73,6 @@ criarBotao("Toggle Voar", function()
         bv.MaxForce = Vector3.new(1e5,1e5,1e5)
         bv.Velocity = Vector3.zero
 
-        -- controle
         local conn
         conn = game:GetService("RunService").Heartbeat:Connect(function()
             if not flying then
@@ -63,10 +81,10 @@ criarBotao("Toggle Voar", function()
                 return
             end
             local move = Vector3.zero
-            if uis:IsKeyDown(Enum.KeyCode.W) then move = move + cam.CFrame.LookVector end
-            if uis:IsKeyDown(Enum.KeyCode.S) then move = move - cam.CFrame.LookVector end
-            if uis:IsKeyDown(Enum.KeyCode.A) then move = move - cam.CFrame.RightVector end
-            if uis:IsKeyDown(Enum.KeyCode.D) then move = move + cam.CFrame.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.W) then move = move + cam.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.S) then move = move - cam.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.A) then move = move - cam.CFrame.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.D) then move = move + cam.CFrame.RightVector end
             bv.Velocity = move * 50
         end)
     end
@@ -167,13 +185,73 @@ criarBotao("Sentar", function()
     end
 end)
 
--- Música troll (loop local)
-criarBotao("Tocar Música Troll", function()
+-- Música local
+criarBotao("Tocar Música Local", function()
     local sound = Instance.new("Sound", workspace)
-    sound.SoundId = "rbxassetid://1843522058" -- ID de som qualquer
+    sound.SoundId = "rbxassetid://1843522058"
     sound.Looped = true
     sound.Volume = 5
     sound:Play()
 end)
 
-print("✅ Admin Troll GUI carregado!")
+-- Fake Lag Global (aciona RemoteEvent no server)
+criarBotao("Fake Lag Global", function()
+    local rs = game:GetService("ReplicatedStorage")
+    local ev = rs:FindFirstChild("FakeLagEvent")
+    if ev then
+        ev:FireServer()
+    else
+        warn("RemoteEvent FakeLagEvent não encontrado no ReplicatedStorage!")
+    end
+end)
+
+-- Música global (aciona RemoteEvent no server)
+criarBotao("Música Global", function()
+    local rs = game:GetService("ReplicatedStorage")
+    local ev = rs:FindFirstChild("TocarMusicaGlobal")
+    if ev then
+        ev:FireServer(2504463529)
+    else
+        warn("RemoteEvent TocarMusicaGlobal não encontrado no ReplicatedStorage!")
+    end
+end)
+
+-- ✅ Noclip
+local noclipEnabled = false
+criarBotao("Toggle Noclip", function()
+    noclipEnabled = not noclipEnabled
+    local char = player.Character
+    if not char then return end
+    for _, part in ipairs(char:GetChildren()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = not noclipEnabled
+        end
+    end
+end)
+
+-- ✅ Teleport para jogador
+criarBotao("Teleportar para Jogador", function()
+    local inputGui = Instance.new("ScreenGui", plrGui)
+    local textbox = Instance.new("TextBox", inputGui)
+    textbox.Size = UDim2.new(0,200,0,30)
+    textbox.Position = UDim2.new(0.5,-100,0.5,-15)
+    textbox.PlaceholderText = "Digite o nome do jogador"
+    textbox.Text = ""
+    textbox.FocusLost:Connect(function(enter)
+        if enter then
+            local target = game.Players:FindFirstChild(textbox.Text)
+            local char = player.Character
+            if target and target.Character and char then
+                local hrp = char:FindFirstChild("HumanoidRootPart")
+                local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+                if hrp and targetHRP then
+                    hrp.CFrame = targetHRP.CFrame + Vector3.new(0,3,0)
+                end
+            end
+            inputGui:Destroy()
+        end
+    end)
+end)
+
+print("✅ Admin Troll GUI carregado com @tavinxoficial, Noclip e TP!")
+
