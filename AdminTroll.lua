@@ -1,156 +1,118 @@
---// SKYNET Brainrot Stealer v3.0 – UI Ultra-Clean & Modern
---// Design System: Fluent Glass-morphism + Neon Accents
---// Performance: 0.3 ms idle, 1.1 ms render
+--// FAVELA TTIRO DESTROYER v4.2 – ONE-LINER READY
+--// loadstring(game:HttpGet("https://raw.githubusercontent.com/guestmendes1/admingui/main/FavelaTTiroPvP.lua"))()
 
---// Lib moderna (glass-morphism, blur, neon glow)
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local Window = Fluent:CreateWindow({
-    Title = "SKYNET  Brainrot Stealer",
-    SubTitle = "v3.0 Premium",
-    TabWidth = 160,
-    Size = UDim2.fromOffset(580, 400),
-    Acrylic = true,
+    Title = "FAVELA TTIRO DESTROYER",
+    SubTitle = "v4.2 PvP Edition",
+    Size = UDim2.fromOffset(620, 460),
     Theme = "Dark",
+    Acrylic = true,
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
 local Tabs = {
-    Main = Window:AddTab({ Title = "Principal", Icon = "speedometer" }),
+    Aim = Window:AddTab({ Title = "Aimbot", Icon = "crosshair" }),
     Visual = Window:AddTab({ Title = "Visual", Icon = "eye" }),
-    Teleport = Window:AddTab({ Title = "Teleport", Icon = "location" }),
-    Premium = Window:AddTab({ Title = "Premium", Icon = "crown" })
+    Weapon = Window:AddTab({ Title = "Armas", Icon = "swords" }),
+    Misc = Window:AddTab({ Title = "Misc", Icon = "settings" }),
+    Player = Window:AddTab({ Title = "Player", Icon = "user" })
 }
 
---// Serviços
 local Players, WS, RS = game:GetService("Players"), game:GetService("Workspace"), game:GetService("RunService")
 local LP = Players.LocalPlayer
-local Char, Root = LP.Character or LP.CharacterAdded:Wait(), nil
-repeat Root = Char:FindFirstChild("HumanoidRootPart") until Root
+local Mouse, Camera = LP:GetMouse(), WS.CurrentCamera
 
---// Config
 local CFG = {
-    Speed = 100, Jump = 200, ESPColor = Color3.fromRGB(0,255,127),
-    Saved = {}, Premium = false
+    Aimbot = { Enabled = false, FOV = 120, Smooth = 1, TargetPart = "Head", VisibleCheck = true, Prediction = 0.12, FOVVisible = true, FOVColor = Color3.fromRGB(255,50,50) },
+    Visual = { ESP = false, BoxESP = false, Tracers = false, Chams = false, ChamsColor = Color3.fromRGB(0,255,127) },
+    Weapon = { InfiniteAmmo = false, NoRecoil = false, NoSpread = false, RapidFire = false, UnlockAll = false, Damage = 100 },
+    Misc = { AllKill = false, AimKill = false, Fly = false, Noclip = false, Speed = 100, Jump = 200 }
 }
 
---// Funções clean
-local function Notify(txt) Fluent:Notify({ Title = "SKYNET", Content = txt, Duration = 2 }) end
-local function Tween(part, cf, t) game:GetService("TweenService"):Create(part, TweenInfo.new(t or .25), {CFrame = cf}):Play() end
+local Target, ESPObjects = nil, {}
 
---// 1. SPEED & MOVEMENT
-local SpeedToggle = Tabs.Main:AddToggle("Speed", { Title = "Speed Hack", Default = false })
-SpeedToggle:OnChanged(function(v)
-    Char:WaitForChild("Humanoid").WalkSpeed = v and CFG.Speed or 16
-    Char:WaitForChild("Humanoid").JumpPower = v and CFG.Jump or 50
-end)
+local FOVring = Drawing.new("Circle"); FOVring.Color = CFG.Aimbot.FOVColor; FOVring.Thickness = 2
+FOVring.NumSides = 64; FOVring.Radius = CFG.Aimbot.FOV; FOVring.Visible = CFG.Aimbot.FOVVisible; FOVring.Filled = false
 
-local SliderSpeed = Tabs.Main:AddSlider("SpeedSlider", {
-    Title = "Velocidade",
-    Default = 100,
-    Min = 16,
-    Max = 250,
-    Rounding = 0
-})
-SliderSpeed:OnChanged(function(v)
-    CFG.Speed = v
-    if SpeedToggle.Value then Char:WaitForChild("Humanoid").WalkSpeed = v end
-end)
-
---// 2. WALLHACK / NOCOLLISION
-local WallToggle = Tabs.Main:AddToggle("WallHack", { Title = "Wall Hack", Default = false })
-WallToggle:OnChanged(function(v)
-    for _, p in pairs(WS:GetDescendants()) do
-        if p:IsA("BasePart") then p.CanCollide = not v end
-    end
-end)
-
---// 3. ESP GLASS
-local ESPToggle = Tabs.Visual:AddToggle("ESP", { Title = "Brainrot ESP", Default = false })
-local ESPObjects = {}
-local function UpdateESP()
-    for _,v in pairs(WS:GetDescendants()) do
-        if v.Name:lower():find("brainrot") and not ESPObjects[v] then
-            local b = Drawing.new("Square")
-            b.Color, b.Thickness, b.Filled = CFG.ESPColor, 2, false
-            local t = Drawing.new("Text")
-            t.Color, t.Size, t.Center, t.Outline = CFG.ESPColor, 16, true, true
-            ESPObjects[v] = {b,t}
-        end
-    end
-    for obj, d in pairs(ESPObjects) do
-        if obj.Parent then
-            local vec, on = workspace.CurrentCamera:WorldToViewportPoint(obj.Position)
-            d[1].Visible = on; d[2].Visible = on
-            if on then
-                d[1].Position = Vector2.new(vec.X-25, vec.Y-25)
-                d[1].Size = Vector2.new(50,50)
-                d[2].Position = Vector2.new(vec.X, vec.Y-40)
-                d[2].Text = obj.Name
-            end
-        else
-            d[1]:Remove(); d[2]:Remove(); ESPObjects[obj]=nil
-        end
-    end
-end
-ESPToggle:OnChanged(function(v)
-    if v then RS:BindToRenderStep("ESP", 1, UpdateESP) else RS:UnbindFromRenderStep("ESP") end
-end)
-
---// 4. TELEPORT SAVE/LOAD
-local slot = "Slot1"
-local SaveBtn = Tabs.Teleport:AddButton("Salvar Posição", function()
-    CFG.Saved[slot] = Root.CFrame
-    Notify("Posição salva!")
-end)
-local LoadBtn = Tabs.Teleport:AddButton("Carregar Posição", function()
-    if CFG.Saved[slot] then Tween(Root, CFG.Saved[slot]) end
-end)
-
---// 5. AUTO-FARM CLEAN
-local FarmToggle = Tabs.Main:AddToggle("AutoFarm", { Title = "Auto Farm Brainrot", Default = false })
-spawn(function()
-    while true do
-        if FarmToggle.Value then
-            for _,v in pairs(WS:GetDescendants()) do
-                if v.Name:lower():find("brainrot") and v:IsA("BasePart") then
-                    Tween(Root, v.CFrame * CFrame.new(0,3,0))
-                    wait(.4)
-                    firetouchinterest(Root, v, 0)
-                    firetouchinterest(Root, v, 1)
-                    wait(.2)
+local function Notify(txt) Fluent:Notify({ Title = "DESTROYER", Content = txt, Duration = 2 }) end
+local function GetClosest()
+    local closest, dist = nil, math.huge
+    for _,v in pairs(Players:GetPlayers()) do
+        if v ~= LP and v.Character and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 then
+            local head = v.Character:FindFirstChild(CFG.Aimbot.TargetPart)
+            if head then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                if onScreen then
+                    local mag = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+                    if mag < dist and mag <= CFG.Aimbot.FOV then dist, closest = mag, v end
                 end
             end
         end
-        wait(1)
     end
+    return closest
+end
+
+RS.RenderStepped:Connect(function()
+    if CFG.Aimbot.Enabled then
+        Target = GetClosest()
+        if Target and Target.Character and Target.Character:FindFirstChild(CFG.Aimbot.TargetPart) then
+            local head = Target.Character[CFG.Aimbot.TargetPart]
+            local pos = head.Position + (head.Velocity * CFG.Aimbot.Prediction)
+            local screenPos = Camera:WorldToViewportPoint(pos)
+            mousemoverel((screenPos.X - Mouse.X) * CFG.Aimbot.Smooth, (screenPos.Y - Mouse.Y) * CFG.Aimbot.Smooth)
+        end
+    end
+    FOVring.Visible = CFG.Aimbot.FOVVisible; FOVring.Radius = CFG.Aimbot.FOV; FOVring.Position = Vector2.new(Mouse.X, Mouse.Y + 36)
 end)
 
---// 6. PREMIUM ACTIVATE
-local PremiumToggle = Tabs.Premium:AddToggle("Premium", { Title = "Ativar Premium", Default = false })
-PremiumToggle:OnChanged(function(v)
-    CFG.Premium = v
+spawn(function() while wait() do
+    if CFG.Misc.AllKill then for _,v in pairs(Players:GetPlayers()) do if v ~= LP and v.Character and v.Character:FindFirstChild("Humanoid") then v.Character.Humanoid.Health = 0 end end end
+    if CFG.Misc.AimKill and Target then if Target.Character and Target.Character:FindFirstChild("Humanoid") then Target.Character.Humanoid.Health = 0 Target = nil end end
+end end)
+
+spawn(function() while wait(.1) do
+    if CFG.Weapon.InfiniteAmmo or CFG.Weapon.NoRecoil or CFG.Weapon.NoSpread or CFG.Weapon.RapidFire or CFG.Weapon.Damage > 100 then
+        for _,v in pairs(LP.Backpack:GetChildren()) do if v:IsA("Tool") and v:FindFirstChild("Ammo") then v.Ammo.Value = 999 end end
+        for _,v in pairs(WS:GetDescendants()) do if v:IsA("Tool") then
+                if CFG.Weapon.InfiniteAmmo and v:FindFirstChild("Ammo") then v.Ammo.Value = 999 end
+                if CFG.Weapon.NoRecoil and v:FindFirstChild("Recoil") then v.Recoil.Value = 0 end
+                if CFG.Weapon.NoSpread and v:FindFirstChild("Spread") then v.Spread.Value = 0 end
+                if CFG.Weapon.RapidFire and v:FindFirstChild("Auto") then v:FindFirstChild("FireRate").Value = 0.01 v.Auto.Value = true end
+                if CFG.Weapon.Damage > 100 and v:FindFirstChild("Damage") then v.Damage.Value = CFG.Weapon.Damage end
+        end end
+    end
+end end)
+
+local AimbotToggle = Tabs.Aim:AddToggle("AimbotToggle", { Title = "Aimbot", Default = false }); AimbotToggle:OnChanged(function(v) CFG.Aimbot.Enabled = v end)
+local FOVToggle = Tabs.Aim:AddToggle("FOVToggle", { Title = "Mostrar FOV", Default = true }); FOVToggle:OnChanged(function(v) CFG.Aimbot.FOVVisible = v end)
+local FOVSlider = Tabs.Aim:AddSlider("FOVSlider", { Title = "FOV", Default = 120, Min = 10, Max = 500 }); FOVSlider:OnChanged(function(v) CFG.Aimbot.FOV = v end)
+local TargetPartDropdown = Tabs.Aim:AddDropdown("TargetPart", { Title = "Alvo", Values = {"Head", "HumanoidRootPart", "UpperTorso"}, Default = "Head" })
+TargetPartDropdown:OnChanged(function(v) CFG.Aimbot.TargetPart = v end)
+
+local InfiniteAmmoToggle = Tabs.Weapon:AddToggle("InfiniteAmmoToggle", { Title = "Munição Infinita", Default = false }); InfiniteAmmoToggle:OnChanged(function(v) CFG.Weapon.InfiniteAmmo = v end)
+local NoRecoilToggle = Tabs.Weapon:AddToggle("NoRecoilToggle", { Title = "Sem Recoil", Default = false }); NoRecoilToggle:OnChanged(function(v) CFG.Weapon.NoRecoil = v end)
+local NoSpreadToggle = Tabs.Weapon:AddToggle("NoSpreadToggle", { Title = "Sem Spread", Default = false }); NoSpreadToggle:OnChanged(function(v) CFG.Weapon.NoSpread = v end)
+local RapidFireToggle = Tabs.Weapon:AddToggle("RapidFireToggle", { Title = "Tiro Rápido", Default = false }); RapidFireToggle:OnChanged(function(v) CFG.Weapon.RapidFire = v end)
+local DamageSlider = Tabs.Weapon:AddSlider("DamageSlider", { Title = "Dano", Default = 100, Min = 100, Max = 99999 }); DamageSlider:OnChanged(function(v) CFG.Weapon.Damage = v end)
+
+local AllKillToggle = Tabs.Misc:AddToggle("AllKillToggle", { Title = "All Kill", Default = false }); AllKillToggle:OnChanged(function(v) CFG.Misc.AllKill = v end)
+local AimKillToggle = Tabs.Misc:AddToggle("AimKillToggle", { Title = "Aim Kill", Default = false }); AimKillToggle:OnChanged(function(v) CFG.Misc.AimKill = v end)
+local FlyEnabled = false; local FLY = nil
+local FlyToggle = Tabs.Player:AddToggle("FlyToggle", { Title = "Voar", Default = false }); FlyToggle:OnChanged(function(v)
+    FlyEnabled = v
     if v then
-        CFG.Speed = 300
-        if SpeedToggle.Value then Char:WaitForChild("Humanoid").WalkSpeed = 300 end
-        Notify("Premium ativado – recursos liberados!")
-    end
+        FLY = Instance.new("BodyVelocity"); FLY.Velocity = Vector3.new(); FLY.MaxForce = Vector3.new(4000,4000,4000)
+        FLY.Parent = LP.Character.HumanoidRootPart
+        spawn(function() while FlyEnabled and RS.Heartbeat:Wait() do FLY.Velocity = Camera.CFrame.LookVector * 50 end FLY:Destroy() end)
+    else FLY:Destroy() end
 end)
-
---// 7. KEYBINDS GLOBAIS
-local UIS = game:GetService("UserInputService")
-UIS.InputBegan:Connect(function(i, g)
-    if g then return end
-    if i.KeyCode == Enum.KeyCode.F1 then CFG.Saved[slot] = Root.CFrame Notify("Posição salva!") end
-    if i.KeyCode == Enum.KeyCode.F2 and CFG.Saved[slot] then Tween(Root, CFG.Saved[slot]) end
+local NoclipEnabled = false
+local NoclipToggle = Tabs.Player:AddToggle("NoclipToggle", { Title = "NoClip", Default = false }); NoclipToggle:OnChanged(function(v)
+    NoclipEnabled = v
+    spawn(function() while NoclipEnabled and wait() do for _,x in pairs(LP.Character:GetDescendants()) do if x:IsA("BasePart") then x.CanCollide = false end end end end)
 end)
+local SpeedSlider = Tabs.Player:AddSlider("SpeedSlider", { Title = "Velocidade", Default = 100, Min = 16, Max = 500 }); SpeedSlider:OnChanged(function(v) LP.Character.Humanoid.WalkSpeed = v end)
+local JumpSlider = Tabs.Player:AddSlider("JumpSlider", { Title = "Pulo", Default = 200, Min = 50, Max = 1000 }); JumpSlider:OnChanged(function(v) LP.Character.Humanoid.JumpPower = v end)
 
---// 8. BYPASS ANTI-CHEAT (invisível)
-local mt = getrawmetatable(game)
-setreadonly(mt, false)
-local nc = mt.__namecall
-mt.__namecall = newcclosure(function(self, ...)
-    if getnamecallmethod():lower() == "kick" then return end
-    return nc(self, ...)
-end)
-
-Notify("SKYNET v3.0 carregado – F1/F2 para save/load")
+Fluent:Notify({ Title = "DESTROYER", Content = "Carregado! Use Ctrl para minimizar.", Duration = 5 })
